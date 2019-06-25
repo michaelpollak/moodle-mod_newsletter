@@ -474,6 +474,8 @@ class newsletter implements renderable {
         $output .= $renderer->render(
                 new \newsletter_main_toolbar($this->get_course_module()->id,
                         $params[NEWSLETTER_PARAM_GROUP_BY],
+                        $params[NEWSLETTER_PARAM_FROMISSUE],
+                        $params[NEWSLETTER_PARAM_COUNT],
                         has_capability('mod/newsletter:createissue', $this->context),
                         has_capability('mod/newsletter:managesubscriptions', $this->context)));
 
@@ -507,7 +509,7 @@ class newsletter implements renderable {
             }
         }
 
-        $issuelist = $this->prepare_issue_list('', $params[NEWSLETTER_PARAM_GROUP_BY]);
+        $issuelist = $this->prepare_issue_list('', $params);
         if ($issuelist) {
             $output .= $renderer->render($issuelist);
         } else {
@@ -958,10 +960,10 @@ class newsletter implements renderable {
      * TODO: implement issue navigation from a point of time to a point of time
      *
      * @param string $heading
-     * @param string $groupby
+     * @param string $params
      * @return NULL|newsletter_section_list
      */
-    private function prepare_issue_list($heading, $groupby) {
+    private function prepare_issue_list($heading, $params) {
         // TODO: Add first day of the week check.
         $editissue = has_capability('mod/newsletter:editissue', $this->get_context());
         $deleteissue = has_capability('mod/newsletter:deleteissue', $this->get_context());
@@ -974,6 +976,8 @@ class newsletter implements renderable {
 
         $firstissue = reset($issues);
         // First day of week $firstdayofweek = (int) get_string('firstdayofweek', 'langconfig');.
+        $groupby = $params[NEWSLETTER_PARAM_GROUP_BY];
+
         switch ($groupby) {
             case NEWSLETTER_GROUP_ISSUES_BY_YEAR:
                 list($from, $to) = $this->get_year_from_to_issuelist($firstissue->publishon);
@@ -992,9 +996,23 @@ class newsletter implements renderable {
                 break;
         }
 
+        $fromissue = $params[NEWSLETTER_PARAM_FROMISSUE];
+        $count = $params[NEWSLETTER_PARAM_COUNT];
+        $i = 0;
+
         $sectionlist = new \newsletter_section_list($heading);
         $currentissuelist = new \newsletter_issue_summary_list();
         foreach ($issues as $issue) {
+
+            // Add pagination
+            $i++;
+            if ($i < $fromissue) {
+                continue;
+            }
+            if ($i >= ($fromissue + $count)) {
+                break;
+            }
+
             if ($issue->publishon >= $from && $issue->publishon < $to) { // If issue in timeslot
                 if (!($issue->publishon > time() && !$editissue)) { // do not display issues that
                                                                     // are not yet published.
@@ -1240,11 +1258,16 @@ class newsletter implements renderable {
      * The range is specified as $from timestamp and $to timestamp
      *
      * @param number $from UTC timestamp
-     * @param number $to UTC timestamp
+     * @param number $to UTC timestamp, if not set we show up to now
      * @return multitype: db records of newsletter issues
      */
     private function get_issues($from = 0, $to = 0) {
         global $DB;
+
+        if (!$to) {
+            $to = time();
+        }
+
         $total = $DB->count_records_select('newsletter_subscriptions',
                 'newsletterid = ' . $this->get_instance()->id . ' AND health < 2');
 
@@ -1252,7 +1275,7 @@ class newsletter implements renderable {
                     FROM {newsletter_issues} i
                    WHERE i.newsletterid = :newsletterid
                      AND i.publishon > :from
-                     AND i.publishon > :to
+                     AND i.publishon < :to
                 ORDER BY i.publishon DESC";
         $params = array('newsletterid' => $this->get_instance()->id, 'from' => $from, 'to' => $to);
         $records = $DB->get_records_sql($query, $params);

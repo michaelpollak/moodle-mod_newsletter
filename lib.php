@@ -93,6 +93,7 @@ define('NEWSLETTER_PARAM_ACTION', 'action');
 define('NEWSLETTER_PARAM_ISSUE', 'issue');
 define('NEWSLETTER_PARAM_GROUP_BY', 'groupby');
 define('NEWSLETTER_PARAM_FROM', 'from');
+define('NEWSLETTER_PARAM_FROMISSUE', 'fromissue');
 define('NEWSLETTER_PARAM_COUNT', 'count');
 define('NEWSLETTER_PARAM_TO', 'to');
 define('NEWSLETTER_PARAM_USER', 'user');
@@ -1006,4 +1007,3 @@ function newsletter_email_to_user($user, $from, $subject, $messagetext, $message
         return false;
     }
 }
-

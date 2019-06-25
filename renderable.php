@@ -227,12 +227,16 @@ class newsletter_pager implements renderable {
 class newsletter_main_toolbar implements renderable {
     public $cmid;
     public $groupby;
+    public $fromissue;
+    public $count;
     public $createissues;
     public $managesubs;
 
-    public function __construct($cmid, $groupby, $createissues = false, $managesubs = false) {
+    public function __construct($cmid, $groupby, $fromissue = 1, $count = 50, $createissues = false, $managesubs = false) {
         $this->cmid = $cmid;
         $this->groupby = $groupby;
+        $this->fromissue = $fromissue;
+        $this->count = $count;
         $this->createissues = $createissues;
         $this->managesubs = $managesubs;
     }

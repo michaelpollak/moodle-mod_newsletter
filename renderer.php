@@ -275,6 +275,15 @@ class mod_newsletter_renderer extends plugin_renderer_base {
         $output .= html_writer::empty_tag('input',
                 array('type' => 'hidden', 'name' => 'id', 'value' => $toolbar->cmid));
         $output .= html_writer::select($options, NEWSLETTER_PARAM_GROUP_BY, $toolbar->groupby, false);
+
+        // Add pagination.
+        $output .= html_writer::tag('span', "Issues per page"); // TODO: Multilang.
+        $options = array(1=>1, 2=>2, 10=>10, 50=>50, 100=>100);
+        $output .= html_writer::select($options, NEWSLETTER_PARAM_COUNT, $toolbar->count, false);
+
+        $output .= html_writer::empty_tag('input',
+                array('type' => 'hidden', 'name' => 'fromissue', 'value' => $toolbar->fromissue));
+
         if ($CFG->branch >= 33) {
             $output .= html_writer::empty_tag('input',
                     array('type' => 'submit', 'value' => get_string('refresh'),
