@@ -266,19 +266,20 @@ class mod_newsletter_renderer extends plugin_renderer_base {
 
         $output = '';
         $output .= html_writer::start_tag('div');
-        $output .= html_writer::tag('span', get_string('groupby', 'mod_newsletter'));
-        $options = array(NEWSLETTER_GROUP_ISSUES_BY_YEAR => get_string('year'),
-            NEWSLETTER_GROUP_ISSUES_BY_MONTH => get_string('month'),
-            NEWSLETTER_GROUP_ISSUES_BY_WEEK => get_string('week'));
         $output .= html_writer::start_tag('form',
                 array('method' => 'GET', 'action' => new moodle_url('/mod/newsletter/view.php')));
         $output .= html_writer::empty_tag('input',
                 array('type' => 'hidden', 'name' => 'id', 'value' => $toolbar->cmid));
+
+        $options = array(NEWSLETTER_GROUP_ISSUES_BY_YEAR => get_string('year'),
+            NEWSLETTER_GROUP_ISSUES_BY_MONTH => get_string('month'),
+            NEWSLETTER_GROUP_ISSUES_BY_WEEK => get_string('week'));
+        $output .= html_writer::tag('span', get_string('groupby', 'mod_newsletter'));
         $output .= html_writer::select($options, NEWSLETTER_PARAM_GROUP_BY, $toolbar->groupby, false);
 
         // Add pagination.
+        $options = array(1 => 1, 2 => 2, 10 => 10, 50 => 50, 100 => 100);
         $output .= html_writer::tag('span', "Issues per page"); // TODO: Multilang.
-        $options = array(1=>1, 2=>2, 10=>10, 50=>50, 100=>100);
         $output .= html_writer::select($options, NEWSLETTER_PARAM_COUNT, $toolbar->count, false);
 
         $output .= html_writer::empty_tag('input',
@@ -292,6 +293,13 @@ class mod_newsletter_renderer extends plugin_renderer_base {
             $output .= html_writer::empty_tag('input',
                     array('type' => 'submit', 'value' => get_string('refresh')));
         }
+
+        $nextfromissue = $toolbar->fromissue + $toolbar->count;
+        $url = new moodle_url('/mod/newsletter/view.php',
+                array('id' => $toolbar->cmid, 'groupby' => $toolbar->groupby,
+                    'count' => $toolbar->count, 'fromissue' => $nextfromissue));
+        $output .= html_writer::link($url, "Next"); // TODO: Multilang.
+
         $output .= html_writer::end_tag('form');
         if ($toolbar->createissues) {
             $output .= $this->render(
