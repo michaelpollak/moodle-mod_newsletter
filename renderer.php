@@ -279,7 +279,7 @@ class mod_newsletter_renderer extends plugin_renderer_base {
 
         // Add pagination.
         $options = array(1 => 1, 2 => 2, 10 => 10, 50 => 50, 100 => 100);
-        $output .= html_writer::tag('span', "Issues per page"); // TODO: Multilang.
+        $output .= html_writer::tag('span', get_string('entries_per_page', 'mod_newsletter') .": ");
         $output .= html_writer::select($options, NEWSLETTER_PARAM_COUNT, $toolbar->count, false);
 
         $output .= html_writer::empty_tag('input',
@@ -294,13 +294,20 @@ class mod_newsletter_renderer extends plugin_renderer_base {
                     array('type' => 'submit', 'value' => get_string('refresh')));
         }
 
+        $output .= html_writer::end_tag('form');
+
+        // Pagination Next and Previous.
+        $prevfromissue = $toolbar->fromissue - $toolbar->count;
+        $prevurl = new moodle_url('/mod/newsletter/view.php',
+                array('id' => $toolbar->cmid, 'groupby' => $toolbar->groupby,
+                    'count' => $toolbar->count, 'fromissue' => $prevfromissue));
         $nextfromissue = $toolbar->fromissue + $toolbar->count;
-        $url = new moodle_url('/mod/newsletter/view.php',
+        $nexturl = new moodle_url('/mod/newsletter/view.php',
                 array('id' => $toolbar->cmid, 'groupby' => $toolbar->groupby,
                     'count' => $toolbar->count, 'fromissue' => $nextfromissue));
-        $output .= html_writer::link($url, "Next"); // TODO: Multilang.
+        $output .= html_writer::link($prevurl, "Previous Page") . " | "; // TODO: Multilang.
+        $output .= html_writer::link($nexturl, "Next Page"); // TODO: Multilang.
 
-        $output .= html_writer::end_tag('form');
         if ($toolbar->createissues) {
             $output .= $this->render(
                     new newsletter_action_button($toolbar->cmid, 0, NEWSLETTER_ACTION_CREATE_ISSUE,
