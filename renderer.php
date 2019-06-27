@@ -282,8 +282,9 @@ class mod_newsletter_renderer extends plugin_renderer_base {
         $output .= html_writer::tag('span', get_string('entries_per_page', 'mod_newsletter') .": ");
         $output .= html_writer::select($options, NEWSLETTER_PARAM_COUNT, $toolbar->count, false);
 
+        // If we refresh the settings we always start with the first issue.
         $output .= html_writer::empty_tag('input',
-                array('type' => 'hidden', 'name' => 'fromissue', 'value' => $toolbar->fromissue));
+                array('type' => 'hidden', 'name' => 'fromissue', 'value' => NEWSLETTER_FROMISSUE_DEFAULT));
 
         if ($CFG->branch >= 33) {
             $output .= html_writer::empty_tag('input',
