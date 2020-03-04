@@ -336,16 +336,14 @@ class newsletter implements renderable {
                     $output = $this->display_resubscribe_form($params);
                 } else {
                     $this->subscribe();
-                    $url = new moodle_url('/mod/newsletter/view.php',
-                            array('id' => $this->get_course_module()->id));
+                    $url = $this->get_url();
                     redirect($url);
                 }
                 break;
             case NEWSLETTER_ACTION_UNSUBSCRIBE:
                 require_capability('mod/newsletter:manageownsubscription', $this->context);
                 $this->unsubscribe($this->get_subid());
-                $url = new moodle_url('/mod/newsletter/view.php',
-                        array('id' => $this->get_course_module()->id));
+                $url = $this->get_url();
                 redirect($url);
                 break;
             case NEWSLETTER_ACTION_GUESTSUBSCRIBE:
@@ -391,8 +389,7 @@ class newsletter implements renderable {
             $this->subscribe_guest($data->firstname, $data->lastname, $data->email);
             $a = $data->email;
             $output .= html_writer::div(get_string('guestsubscriptionsuccess', 'newsletter', $a));
-            $url = new moodle_url('/mod/newsletter/view.php',
-                    array('id' => $this->get_course_module()->id));
+            $url = $this->get_url();
             $output .= html_writer::link($url, get_string('continue'),
                     array('class' => 'btn mdl-align'));
             return $output;
@@ -434,8 +431,7 @@ class newsletter implements renderable {
                 $output .= html_writer::div('&nbsp;');
                 $output .= html_writer::div(get_string('resubscriptionsuccess', 'mod_newsletter'));
                 $output .= html_writer::div('&nbsp;');
-                $url = new moodle_url('/mod/newsletter/view.php',
-                        array('id' => $this->get_course_module()->id));
+                $url = $this->get_url();
                 $output .= html_writer::link($url, get_string('continue'),
                         array('class' => 'btn mdl-align'));
                 $output .= $renderer->render_footer();
@@ -479,9 +475,7 @@ class newsletter implements renderable {
         if (has_capability('mod/newsletter:manageownsubscription', $this->context) &&
                 $this->instance->subscriptionmode != NEWSLETTER_SUBSCRIPTION_MODE_FORCED) {
             if (!$this->is_subscribed()) {
-                $url = new moodle_url('/mod/newsletter/view.php',
-                        array(NEWSLETTER_PARAM_ID => $this->get_course_module()->id,
-                            NEWSLETTER_PARAM_ACTION => NEWSLETTER_ACTION_SUBSCRIBE));
+                $url = $this->get_subsribe_url();
                 $text = get_string('subscribe', 'mod_newsletter');
                 $output .= html_writer::link($url, $text);
             } else {
@@ -613,8 +607,7 @@ class newsletter implements renderable {
         }
 
         if ($params[NEWSLETTER_PARAM_CONFIRM] != NEWSLETTER_CONFIRM_UNKNOWN) {
-            $url = new moodle_url('/mod/newsletter/view.php',
-                    array(NEWSLETTER_PARAM_ID => $this->get_course_module()->id));
+            $url = $this->get_url();
             if ($params[NEWSLETTER_PARAM_CONFIRM] == NEWSLETTER_CONFIRM_YES) {
                 $this->delete_issue($params[NEWSLETTER_PARAM_ISSUE]);
                 redirect($url);
@@ -717,9 +710,7 @@ class newsletter implements renderable {
             } else {
                 $this->update_issue($data);
             }
-            $url = new moodle_url('/mod/newsletter/view.php',
-                    array('id' => $this->get_course_module()->id));
-            redirect($url);
+            redirect($this->get_url());
         }
 
         $output = '';
@@ -768,6 +759,7 @@ class newsletter implements renderable {
 
         $columns = array(NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_EMAIL,
             NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_NAME, NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_HEALTH,
+            NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_BOUNCERATIO,
             NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_TIMESUBSCRIBED,
             NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_ACTIONS);
 
@@ -873,6 +865,20 @@ class newsletter implements renderable {
         $event->trigger();
 
         return $output;
+    }
+
+    /**
+     * Get number of delivered issues
+     *
+     * @param $userid
+     * @param $issueid
+     * @return int
+     * @throws \dml_exception
+     */
+    public static function get_delivered_issues($userid) {
+        global $DB;
+        $delivered = $DB->count_records('newsletter_deliveries', array('userid' => $userid));
+        return $delivered;
     }
 
     /**
@@ -1108,6 +1114,14 @@ class newsletter implements renderable {
         return $pages;
     }
 
+    /**
+     * Check if issueid exists
+     *
+     * @param $issueid
+     * @return bool
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
     private function check_issue_id($issueid) {
         global $DB;
 
@@ -1115,6 +1129,14 @@ class newsletter implements renderable {
                 array('id' => $issueid, 'newsletterid' => $this->get_instance()->id));
     }
 
+    /**
+     * Add newsletter issue
+     *
+     * @param stdClass $data
+     * @return bool|int
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
     private function add_issue(stdClass $data) {
         global $DB;
         $context = $this->get_context();
@@ -1266,7 +1288,7 @@ class newsletter implements renderable {
         }
 
         $total = $DB->count_records_select('newsletter_subscriptions',
-                'newsletterid = ' . $this->get_instance()->id . ' AND health < 2');
+            'newsletterid = ' . $this->get_instance()->id . ' AND health < 2');
 
         $query = "SELECT i.*
                     FROM {newsletter_issues} i
@@ -1279,11 +1301,12 @@ class newsletter implements renderable {
         foreach ($records as $record) {
             $record->cmid = $this->get_course_module()->id;
             $record->numsubscriptions = $total;
-            if ($record->delivered == NEWSLETTER_DELIVERY_STATUS_DELIVERED || $record->delivered == NEWSLETTER_DELIVERY_STATUS_INPROGRESS) {
+            if ($record->delivered == NEWSLETTER_DELIVERY_STATUS_DELIVERED ||
+                $record->delivered == NEWSLETTER_DELIVERY_STATUS_INPROGRESS) {
                 $record->numnotyetdelivered = $DB->count_records('newsletter_deliveries',
-                        array('issueid' => $record->id, 'delivered' => 0));
-                $record->numdelivered = $DB->count_records('newsletter_deliveries',
-                        array('issueid' => $record->id, 'delivered' => 1));
+                    array('issueid' => $record->id, 'delivered' => 0));
+                $record->numdelivered = $DB->count_records_select('newsletter_deliveries',
+                    'issueid = :issueid AND delivered > 0', array('issueid' => $record->id));
             } else {
                 $record->numdelivered = 0;
             }
@@ -1472,10 +1495,21 @@ class newsletter implements renderable {
      * Returns the base url for the newsletter instance
      *
      * @return moodle_url
+     * @throws \moodle_exception
      */
     public function get_url() {
-        $url = new moodle_url('/mod/newsletter/view.php',
-                array(NEWSLETTER_PARAM_ID => $this->get_course_module()->cmid));
+        return new moodle_url('/mod/newsletter/view.php',
+                array(NEWSLETTER_PARAM_ID => $this->get_course_module()->id));
+    }
+
+    /**
+     * Returns the url for the subscribing to the newsletter
+     *
+     * @return moodle_url
+     */
+    public function get_subsribe_url() {
+        $url = $this->get_url();
+        $url->param(NEWSLETTER_PARAM_ACTION,NEWSLETTER_ACTION_SUBSCRIBE);
         return $url;
     }
 
@@ -1769,9 +1803,10 @@ class newsletter implements renderable {
             INNER JOIN {user} u ON ns.userid = u.id
             WHERE ns.newsletterid = :newsletterid AND ";
         } else {
-            $sql = "SELECT ns.*, $allnamefields
+            $sql = "SELECT DISTINCT ns.*, {$allnamefields}, COUNT(DISTINCT nb.id) AS bounces
             FROM {newsletter_subscriptions} ns
             INNER JOIN {user} u ON ns.userid = u.id
+            LEFT JOIN {newsletter_bounces} nb ON nb.userid = u.id
             WHERE ns.newsletterid = :newsletterid AND ";
         }
 
@@ -1786,6 +1821,9 @@ class newsletter implements renderable {
         if ($getparams['status'] != 10) {
             $sql .= " AND ns.health = :status";
             $params += array('status' => $getparams['status']);
+        }
+        if (!$count) {
+            $sql .= " GROUP BY u.id ";
         }
         if ($getparams['orderby'] != '') {
             $sql .= " ORDER BY u." . $getparams['orderby'];

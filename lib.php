@@ -116,6 +116,7 @@ define('NEWSLETTER_CONFIRM_UNKNOWN', -1);
 define('NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_EMAIL', 'col_email');
 define('NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_NAME', 'col_name');
 define('NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_HEALTH', 'col_health');
+define('NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_BOUNCERATIO', 'col_bounceratio');
 define('NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_TIMESUBSCRIBED', 'col_timesubscribed');
 define('NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_ACTIONS', 'col_actions');
 
@@ -365,6 +366,32 @@ function newsletter_get_extra_capabilities() {
     return array();
 }
 
+// Find the base url from $_GET variables, for print_paging_bar.
+function newsletter_get_baseurl() {
+    $getcopy  = $_GET;
+
+    unset($getcopy['blogpage']);
+
+    if (!empty($getcopy)) {
+        $first = false;
+        $querystring = '';
+
+        foreach ($getcopy as $var => $val) {
+            if (!$first) {
+                $first = true;
+                $querystring .= "?$var=$val";
+            } else {
+                $querystring .= '&amp;'.$var.'='.$val;
+                $hasparam = true;
+            }
+        }
+    } else {
+        $querystring = '?';
+    }
+
+    return strip_querystring(qualified_me()) . $querystring;
+
+}
 // File API.
 
 /**

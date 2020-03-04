@@ -66,9 +66,14 @@ class mod_newsletter_renderer extends plugin_renderer_base {
         return $output;
     }
 
+    /**
+     * @param newsletter_section_list $sectionlist
+     * @return string
+     * @throws coding_exception
+     * @throws moodle_exception
+     */
     public function render_newsletter_section_list(newsletter_section_list $sectionlist) {
         $output = '';
-
         $output .= html_writer::start_tag('div', array('class' => 'mod_newsletter__section-list'));
         /*
          * // Temporarily unused
@@ -77,15 +82,25 @@ class mod_newsletter_renderer extends plugin_renderer_base {
          * $output .= html_writer::end_tag('h3');
          * //
          */
+
+        $page  = optional_param('page', 0, PARAM_INT);
+        $data = (array)$sectionlist->sections;
+        $totalcount = count($data);
+        $baseurl = newsletter_get_baseurl();
+        $perpage=5;
+        $pagingbar = new paging_bar($totalcount, $page, $perpage, $baseurl, $pagevar = 'page');
+        $paginbarhtml = $this->render($pagingbar);
+
+        $start = $page * $perpage;
         $output .= html_writer::start_tag('ul');
-        foreach ($sectionlist->sections as $section) {
+        foreach (array_slice($data, $start, $perpage) as $section) {
             $output .= html_writer::start_tag('li');
             $output .= $this->render($section);
             $output .= html_writer::end_tag('li');
         }
         $output .= html_writer::end_tag('ul');
+        $output .= $paginbarhtml;
         $output .= html_writer::end_tag('div');
-
         return $output;
     }
 
@@ -394,6 +409,9 @@ class mod_newsletter_renderer extends plugin_renderer_base {
                 case NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_HEALTH:
                     $content = get_string('header_health', 'mod_newsletter');
                     break;
+                case NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_BOUNCERATIO:
+                    $content = get_string('header_bounceratio', 'mod_newsletter');
+                    break;
                 case NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_TIMESUBSCRIBED:
                     $content = get_string('header_timesubscribed', 'mod_newsletter');
                     break;
@@ -427,8 +445,10 @@ class mod_newsletter_renderer extends plugin_renderer_base {
                         break;
                     case NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_HEALTH:
                         $content = get_string("health_{$subscription->health}", 'newsletter');
-                        $content .= " (" . $this->newsletter_count_bounces(
-                                $subscription->newsletterid, $subscription->userid) . ")";
+                        $content .= " ($subscription->sentnewsletters / $subscription->bounces)";
+                        break;
+                    case NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_BOUNCERATIO:
+                        $content = 0; // Todo: Improve bounce ratio. mod_newsletter\bounce\bounceprocessor::calculate_bounceratio($subscription->userid);
                         break;
                     case NEWSLETTER_SUBSCRIPTION_LIST_COLUMN_TIMESUBSCRIBED:
                         $content = userdate($subscription->timesubscribed,
@@ -478,6 +498,13 @@ class mod_newsletter_renderer extends plugin_renderer_base {
         return html_writer::table($table);
     }
 
+    /**
+     * Render publish countdown
+     *
+     * @param newsletter_publish_countdown $countdown
+     * @return string
+     * @throws coding_exception
+     */
     public function render_newsletter_publish_countdown(newsletter_publish_countdown $countdown) {
         $output = '';
         $output .= html_writer::start_tag('span');
@@ -505,10 +532,9 @@ class mod_newsletter_renderer extends plugin_renderer_base {
     private function newsletter_count_bounces($newsletterid, $userid) {
         global $DB;
 
-        $bounces = 0;
         $sql = "SELECT count(*)
-		        FROM {newsletter_issues} ni
-				INNER JOIN {newsletter_bounces} nb on ni.id = nb.issueid
+		        FROM {newsletter_bounces} nb
+				INNER JOIN {newsletter_issues} ni on ni.id = nb.issueid
 		        WHERE ni.newsletterid = :newsletterid
 		        AND nb.userid = :userid";
         $params = array('newsletterid' => $newsletterid, 'userid' => $userid);
