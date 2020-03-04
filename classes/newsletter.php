@@ -565,8 +565,8 @@ class newsletter implements renderable {
         $files = $fs->get_area_files($this->get_context()->id, 'mod_newsletter',
                 NEWSLETTER_FILE_AREA_ATTACHMENT, $currentissue->id, "", false);
         foreach ($files as $file) {
-            $file->link = file_encode_url($CFG->wwwroot . '/pluginfile.php',
-                    '/' . $this->get_context()->id . '/mod_newsletter/attachments/' . $currentissue->id . '/' . $file->get_filename());
+            $file->link = file_encode_url($CFG->wwwroot . '/pluginfile.php', '/' . $this->get_context()->id .
+                '/mod_newsletter/attachments/' . $currentissue->id . '/' . $file->get_filename());
         }
 
         if (!empty($files)) {
@@ -1007,7 +1007,7 @@ class newsletter implements renderable {
         $currentissuelist = new \newsletter_issue_summary_list();
         foreach ($issues as $issue) {
 
-            // Add pagination
+            // Add pagination.
             $i++;
             if ($i < $fromissue) {
                 continue;
@@ -1186,8 +1186,9 @@ class newsletter implements renderable {
         $context = $this->get_context();
         $oldissue = $this->get_issue($data->issue);
         $deliverystartedorcompleted = true;
-        if ($oldissue->delivered == NEWSLETTER_DELIVERY_STATUS_UNKNOWN || $oldissue->delivered == NEWSLETTER_DELIVERY_STATUS_FAILED) {
-            $deliverystartedorcompleted = false;
+        if ($oldissue->delivered == NEWSLETTER_DELIVERY_STATUS_UNKNOWN ||
+            $oldissue->delivered == NEWSLETTER_DELIVERY_STATUS_FAILED) {
+                $deliverystartedorcompleted = false;
         }
 
         $issue = new stdClass();
@@ -1509,7 +1510,7 @@ class newsletter implements renderable {
      */
     public function get_subsribe_url() {
         $url = $this->get_url();
-        $url->param(NEWSLETTER_PARAM_ACTION,NEWSLETTER_ACTION_SUBSCRIBE);
+        $url->param(NEWSLETTER_PARAM_ACTION, NEWSLETTER_ACTION_SUBSCRIBE);
         return $url;
     }
 
@@ -1525,11 +1526,11 @@ class newsletter implements renderable {
      * @param string $status
      * @param boolean $resubscribeunsubscribed true to resubscribe unsubscribed users
      * @param integer $instanceid only needed when newsletter instance is created
-     * @return boolean|number <boolean, number> subscriptionid for new subscription false when user is subscribed and status remains unchanged true
-     *         when changed from unsubscribed to NEWSLETTER_SUBSCRIBER_STATUS_OK
+     * @return boolean|number <boolean, number> subscriptionid for new subscription false when user is subscribed
+     *  and status remains unchanged true when changed from unsubscribed to NEWSLETTER_SUBSCRIBER_STATUS_OK
      */
-    public function subscribe($userid = 0, $bulk = false, $status = NEWSLETTER_SUBSCRIBER_STATUS_OK, $resubscribeunsubscribed = false,
-            $instanceid = 0) {
+    public function subscribe($userid = 0, $bulk = false, $status = NEWSLETTER_SUBSCRIBER_STATUS_OK,
+        $resubscribeunsubscribed = false, $instanceid = 0) {
         global $DB, $USER;
         $now = time();
 
@@ -1859,7 +1860,8 @@ class newsletter implements renderable {
                     'mod_newsletter', NEWSLETTER_FILE_AREA_STYLESHEET, $newsletter->id, $fileoptions);
         }
 
-        if ($newsletter->subscriptionmode == NEWSLETTER_SUBSCRIPTION_MODE_OPT_OUT || $newsletter->subscriptionmode == NEWSLETTER_SUBSCRIPTION_MODE_FORCED) {
+        if ($newsletter->subscriptionmode == NEWSLETTER_SUBSCRIPTION_MODE_OPT_OUT ||
+            $newsletter->subscriptionmode == NEWSLETTER_SUBSCRIPTION_MODE_FORCED) {
             $users = get_enrolled_users($context, null, null, 'u.id');
             foreach ($users as $user) {
                 $this->subscribe($user->id, true, NEWSLETTER_SUBSCRIBER_STATUS_OK, false,
